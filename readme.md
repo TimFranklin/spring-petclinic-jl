@@ -6,10 +6,17 @@ Vulnerable version of the venerable PetClinic
 <a href="https://speakerdeck.com/michaelisvy/spring-petclinic-sample-application">See the presentation here</a>
 
 ## Running petclinic locally
+
+Make sure you are using Java 1.8
+
+```shell script
+java -version
 ```
-	git clone https://github.com/spring-projects/spring-petclinic.git
-	cd spring-petclinic
-	./mvnw spring-boot:run
+
+```shell script
+git clone https://github.com/spring-projects/spring-petclinic.git
+cd spring-petclinic
+./mvnw spring-boot:run
 ```
 
 You can then access petclinic here: http://localhost:8080/
