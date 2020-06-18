@@ -310,13 +310,12 @@
                     <argLine>
                         -javaagent:${project.basedir}/jacocoagent.jar=destfile=${project.basedir}/target/jacoco.exec
                         -javaagent:${project.basedir}/contrast.jar
-                        -Dcontrast.dir=${project.basedir}/working
-                        -Dcontrast.log.daily=true
-                        -Dcontrast.standalone.appname=petclinic
-                        -Dcontrast.override.appversion=petclinic-${build.number}
-                        -Dcontrast.server=spring-petclinic-qa
-                        -Dcontrast.env=qa
-                        -Dcsrf.protected.uris=csrf-urls.txt
+                        -Dcontrast.agent.contrast_working_dir=${project.basedir}/working
+                        -Dcontrast.agent.logger.roll_daily=true
+                        -Dcontrast.agent.java.standalone_app_name=${project.artifactId}
+                        -Dcontrast.application.version=petclinic-${build.number}
+                        -Dcontrast.server.name=spring-petclinic-qa
+                        -Dcontrast.server.environment=qa
                     </argLine>
                 </configuration>
             </plugin>
@@ -327,13 +326,12 @@
                     <!-- Verify security and coverage during normal use -->
                     <jvmArguments>
                         -javaagent:${project.basedir}/contrast.jar
-                        -Dcontrast.dir=${project.basedir}/working
-                        -Dcontrast.log.daily=true
-                        -Dcontrast.standalone.appname=petclinic
-                        -Dcontrast.override.appversion=petclinic-${build.number}
-                        -Dcontrast.server=spring-petclinic-dev
-                        -Dcontrast.env=development
-                        -Dcontrast.classpath.libs=true
+                        -Dcontrast.agent.contrast_working_dir=${project.basedir}/working
+                        -Dcontrast.agent.logger.roll_daily=true
+                        -Dcontrast.agent.java.standalone_app_name=${project.artifactId}
+                        -Dcontrast.application.version=petclinic-${build.number}
+                        -Dcontrast.server.name=spring-petclinic-dev
+                        -Dcontrast.server.environment=development
                     </jvmArguments>
                 </configuration>
                 <executions>
